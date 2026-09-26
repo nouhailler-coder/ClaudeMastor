@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'createdAt', 'updatedAt']) &&
+             data.uid is string && data.uid == request.auth.uid && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 254 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 120)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidFlashcardProgress(data) {
+      return data.keys().hasAll(['uid', 'cardId', 'status']) &&
+             data.keys().hasOnly(['uid', 'cardId', 'domainId', 'status', 'updatedAt']) &&
+             data.uid is string && data.uid == request.auth.uid && data.uid.size() <= 128 &&
+             data.cardId is int && data.cardId >= 1 && data.cardId <= 10000 &&
+             (!('domainId' in data) || (data.domainId is int && data.domainId >= 1 && data.domainId <= 5)) &&
+             data.status is string && data.status in ['mastered', 'review', 'unread'] &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidExamAttempt(data) {
+      return data.keys().hasAll(['uid', 'score', 'totalQuestions', 'percentage', 'passed']) &&
+             data.keys().hasOnly(['uid', 'score', 'totalQuestions', 'percentage', 'passed', 'timeSpentSeconds', 'createdAt']) &&
+             data.uid is string && data.uid == request.auth.uid && data.uid.size() <= 128 &&
+             data.score is int && data.score >= 0 && data.score <= 500 &&
+             data.totalQuestions is int && data.totalQuestions >= 1 && data.totalQuestions <= 500 &&
+             data.percentage is number && data.percentage >= 0 && data.percentage <= 100 &&
+             data.passed is bool &&
+             (!('timeSpentSeconds' in data) || (data.timeSpentSeconds is int && data.timeSpentSeconds >= 0 && data.timeSpentSeconds <= 86400)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    // Health check test path
+    match /test/connection {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow delete: if false;
+
+      match /flashcardProgress/{cardId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(cardId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(userId) && isValidId(cardId) && isValidFlashcardProgress(incoming());
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(cardId);
+      }
+
+      match /examAttempts/{attemptId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(attemptId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(userId) && isValidId(attemptId) && isValidExamAttempt(incoming());
+        allow delete: if false;
+      }
+    }
+  }
+}

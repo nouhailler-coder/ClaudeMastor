@@ -1,0 +1,120 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile and aggregate certification study statistics.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Authentication User ID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the user."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar photo URL of the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account registration timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp."
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "FlashcardProgress": {
+      "title": "FlashcardProgress",
+      "description": "Tracking progress and mastery state for a specific flashcard.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Owner user ID."
+        },
+        "cardId": {
+          "type": "integer",
+          "description": "ID of the flashcard (1 to 10000 across certification decks)."
+        },
+        "domainId": {
+          "type": "integer",
+          "description": "Domain number (1 to 5)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["mastered", "review", "unread"],
+          "description": "Learning status of this flashcard."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of last review."
+        }
+      },
+      "required": ["uid", "cardId", "status"]
+    },
+    "ExamAttempt": {
+      "title": "ExamAttempt",
+      "description": "Recorded mock exam session score and answers breakdown.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "User ID who took the exam."
+        },
+        "score": {
+          "type": "integer",
+          "description": "Total correct answers."
+        },
+        "totalQuestions": {
+          "type": "integer",
+          "description": "Total questions in exam."
+        },
+        "percentage": {
+          "type": "number",
+          "description": "Percentage score achieved."
+        },
+        "passed": {
+          "type": "boolean",
+          "description": "Whether passing threshold (75%) was met."
+        },
+        "timeSpentSeconds": {
+          "type": "integer",
+          "description": "Duration of exam in seconds."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Submission timestamp."
+        }
+      },
+      "required": ["uid", "score", "totalQuestions", "percentage", "passed"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profile and overall metrics."
+    },
+    "/users/{userId}/flashcardProgress/{cardId}": {
+      "schema": "FlashcardProgress",
+      "description": "Stores per-flashcard mastery status for an individual user."
+    },
+    "/users/{userId}/examAttempts/{attemptId}": {
+      "schema": "ExamAttempt",
+      "description": "Stores mock exam scorecards and history for an individual user."
+    }
+  }
+}

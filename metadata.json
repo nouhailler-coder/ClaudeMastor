@@ -1,0 +1,6 @@
+{
+  "name": "Claude Certified Architect Prep",
+  "description": "Plateforme de préparation officielle pour la certification Claude Certified Architect Foundations d'Anthropic : examens blancs chronométrés, labs pratiques et diagnostics de compétences.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
