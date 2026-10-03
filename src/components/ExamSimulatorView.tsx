@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ExamQuestion } from '../types';
 import { MOCK_EXAM_QUESTIONS } from '../data/mockData';
+import { updateResumeCheckpoint } from '../utils/resumeEngine';
+import { AITutorFeedback } from './AITutorFeedback';
 import {
   Timer,
   Bookmark,
+  Bot,
   Calculator,
   Keyboard,
   ArrowLeft,
@@ -45,6 +48,11 @@ export const ExamSimulatorView: React.FC<ExamSimulatorViewProps> = ({
   const [timeLeft, setTimeLeft] = useState<number>(74 * 60 + 18);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(true);
 
+  // AI Tutor Socratic state
+  const [isAiTutorEnabled, setIsAiTutorEnabled] = useState<boolean>(true);
+  const [attemptsByQuestion, setAttemptsByQuestion] = useState<Record<number, string[]>>({});
+  const [secondTrySuccessByQuestion, setSecondTrySuccessByQuestion] = useState<Record<number, boolean>>({});
+
   // Modals state
   const [showSubmitModal, setShowSubmitModal] = useState<boolean>(false);
   const [showTokenModal, setShowTokenModal] = useState<boolean>(false);
@@ -72,11 +80,65 @@ export const ExamSimulatorView: React.FC<ExamSimulatorViewProps> = ({
   // Current Question
   const currentQuestion = MOCK_EXAM_QUESTIONS.find((q) => q.id === currentQuestionId) || MOCK_EXAM_QUESTIONS[23];
 
+  // Auto-save checkpoint for "Continue where you left off"
+  useEffect(() => {
+    const answeredTotal = Object.keys(selectedAnswers).length;
+    const isDrillSession = currentQuestionId === 37 || initialQuestionId === 37;
+    if (isDrillSession) {
+      updateResumeCheckpoint(
+        'drill',
+        {
+          progressPercent: Math.min(100, Math.round((currentQuestionId / 50) * 100)),
+          lastSessionTitle: 'Tool Use & MCP',
+          stepProgressLabel: `Question ${currentQuestionId} / 50`,
+          subDetailLabel: currentQuestion.domainTitle,
+          payload: {
+            questionId: currentQuestionId,
+            domainId: currentQuestion.domainId,
+          },
+        },
+        true
+      );
+    } else {
+      updateResumeCheckpoint(
+        'exam',
+        {
+          progressPercent: Math.min(100, Math.round((currentQuestionId / 60) * 100)),
+          lastSessionTitle: `Simulation CCA-P200 (${answeredTotal} répondues)`,
+          stepProgressLabel: `Question ${currentQuestionId} / 60`,
+          subDetailLabel: `${currentQuestion.domainTitle} · ${Object.values(flaggedQuestions).filter(Boolean).length} marquées`,
+          payload: {
+            questionId: currentQuestionId,
+            timeLeftSeconds: timeLeft,
+          },
+        },
+        true
+      );
+    }
+  }, [currentQuestionId, selectedAnswers]);
+
   const handleSelectOption = (optionId: string) => {
+    const previousAttempts = attemptsByQuestion[currentQuestionId] || [];
+    if (previousAttempts.length > 0 && optionId === currentQuestion.correctOptionId) {
+      setSecondTrySuccessByQuestion((prev) => ({ ...prev, [currentQuestionId]: true }));
+    }
+    setAttemptsByQuestion((prev) => ({
+      ...prev,
+      [currentQuestionId]: [...previousAttempts, optionId],
+    }));
+
     setSelectedAnswers((prev) => ({
       ...prev,
       [currentQuestionId]: optionId,
     }));
+  };
+
+  const handleRetryQuestion = () => {
+    setSelectedAnswers((prev) => {
+      const copy = { ...prev };
+      delete copy[currentQuestionId];
+      return copy;
+    });
   };
 
   const handleToggleFlag = () => {
@@ -165,8 +227,23 @@ export const ExamSimulatorView: React.FC<ExamSimulatorViewProps> = ({
           {/* Quick Action Utilities */}
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsAiTutorEnabled((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-[12px] transition-colors border cursor-pointer ${
+                isAiTutorEnabled
+                  ? 'bg-[#f2faf3] text-[#2e7d32] border-[#c8e6c9] font-bold shadow-2xs'
+                  : 'bg-white hover:bg-[#f0eded] text-[#88726c] border-[#eae7e7]'
+              }`}
+              title="Activer ou mettre en pause l'AI Tutor ClaudeMastor"
+              type="button"
+            >
+              <Bot className="w-4 h-4 text-[#2e7d32]" />
+              <span className="hidden sm:inline">AI Tutor</span>
+              <span className="text-[10px] uppercase font-bold">{isAiTutorEnabled ? 'Actif' : 'Off'}</span>
+            </button>
+
+            <button
               onClick={handleToggleFlag}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-[12px] transition-colors border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-[12px] transition-colors border cursor-pointer ${
                 flaggedQuestions[currentQuestionId]
                   ? 'bg-[#ffdbd0] text-[#7a2f15] border-[#ffb59e] font-semibold'
                   : 'bg-white hover:bg-[#f0eded] text-[#55433d] border-[#eae7e7]'
@@ -322,24 +399,35 @@ export const ExamSimulatorView: React.FC<ExamSimulatorViewProps> = ({
             <div className="flex flex-col gap-3">
               {currentQuestion.options.map((opt) => {
                 const isSelected = selectedAnswers[currentQuestionId] === opt.id;
+                const hasTriedThisOption = (attemptsByQuestion[currentQuestionId] || []).includes(opt.id);
+                const isWrongPreviousAttempt = hasTriedThisOption && opt.id !== currentQuestion.correctOptionId;
+
                 return (
                   <div
                     key={opt.id}
                     onClick={() => handleSelectOption(opt.id)}
                     className={`group cursor-pointer rounded-xl p-4 transition-all flex items-start gap-3 border ${
                       isSelected
-                        ? 'bg-white border-[#d97757] shadow-md ring-1 ring-[#d97757]/40 bg-gradient-to-r from-[#ffdbd0]/30 to-transparent'
+                        ? opt.id === currentQuestion.correctOptionId
+                          ? 'bg-[#f2faf3] border-[#2e7d32] shadow-sm ring-1 ring-[#2e7d32]/30'
+                          : 'bg-white border-[#d97757] shadow-md ring-1 ring-[#d97757]/40 bg-gradient-to-r from-[#ffdbd0]/30 to-transparent'
+                        : isWrongPreviousAttempt
+                        ? 'bg-[#f6f3f2]/60 border-[#eae7e7] opacity-65 hover:opacity-90'
                         : 'bg-white border-[#eae7e7] hover:border-[#dbc1b9] hover:bg-[#faf7f6]'
                     }`}
                   >
                     <div
                       className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-[12px] font-bold shrink-0 transition-colors ${
                         isSelected
-                          ? 'bg-[#99462a] text-white shadow-xs'
+                          ? opt.id === currentQuestion.correctOptionId
+                            ? 'bg-[#2e7d32] text-white'
+                            : 'bg-[#99462a] text-white shadow-xs'
+                          : isWrongPreviousAttempt
+                          ? 'bg-[#ffdad6] text-[#ba1a1a]'
                           : 'bg-[#f0eded] text-[#1c1b1b] group-hover:bg-[#eae7e7]'
                       }`}
                     >
-                      {opt.id}
+                      {isWrongPreviousAttempt && !isSelected ? '✗' : opt.id}
                     </div>
 
                     <div className="flex flex-col min-w-0 flex-1">
@@ -348,7 +436,7 @@ export const ExamSimulatorView: React.FC<ExamSimulatorViewProps> = ({
                           {opt.text}
                         </span>
                         {isSelected && (
-                          <CheckCircle className="w-5 h-5 text-[#99462a] shrink-0 mt-0.5" />
+                          <CheckCircle className={`w-5 h-5 shrink-0 mt-0.5 ${opt.id === currentQuestion.correctOptionId ? 'text-[#2e7d32]' : 'text-[#99462a]'}`} />
                         )}
                       </div>
 
@@ -357,11 +445,39 @@ export const ExamSimulatorView: React.FC<ExamSimulatorViewProps> = ({
                           {opt.subtext}
                         </span>
                       )}
+
+                      {isWrongPreviousAttempt && !isSelected && (
+                        <span className="font-mono text-[11px] text-[#ba1a1a] mt-1 font-semibold">
+                          (Essai précédent infructueux — écarté par l’indice socratique)
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* AI Tutor Socratic Feedback Workflow */}
+            {isAiTutorEnabled && selectedAnswers[currentQuestionId] && (
+              <div className="pt-2">
+                <AITutorFeedback
+                  questionId={currentQuestion.id}
+                  questionText={currentQuestion.question}
+                  selectedOptionId={selectedAnswers[currentQuestionId]}
+                  selectedOptionText={
+                    currentQuestion.options.find((o) => o.id === selectedAnswers[currentQuestionId])?.text || ''
+                  }
+                  correctOptionId={currentQuestion.correctOptionId}
+                  correctOptionText={
+                    currentQuestion.options.find((o) => o.id === currentQuestion.correctOptionId)?.text
+                  }
+                  fullExplanation={currentQuestion.rationale}
+                  domainName={currentQuestion.domainTitle}
+                  isSecondTrySuccess={!!secondTrySuccessByQuestion[currentQuestionId]}
+                  onRetry={handleRetryQuestion}
+                />
+              </div>
+            )}
           </div>
 
           {/* Candidate Scratchpad */}

@@ -1,4 +1,23 @@
-export type TabType = 'dashboard' | 'exam' | 'scorecard' | 'lab' | 'flashcards' | 'encyclopedia';
+export type TabType =
+  | 'dashboard'
+  | 'daily-challenge'
+  | 'study-plan'
+  | 'architecture-cases'
+  | 'skills-badges'
+  | 'my-mistakes'
+  | 'exam'
+  | 'scorecard'
+  | 'lab'
+  | 'flashcards'
+  | 'encyclopedia';
+
+export type TrainingDurationMode =
+  | '5min'
+  | 'today-5q'
+  | '15min'
+  | '30min'
+  | 'exam-full'
+  | 'arch-case';
 
 export interface Flashcard {
   id: number;
@@ -124,3 +143,21 @@ export interface LabWorkshop {
   description: string;
   level: 'Débutant' | 'Intermédiaire' | 'Avancé' | 'Expert';
 }
+
+export type SRSStage = 'new' | 'difficult' | 'review' | 'acquired' | 'consolidated';
+
+export type SRSRating = 'again' | 'hard' | 'good' | 'easy';
+
+export interface SRSCardRecord {
+  cardId: number;
+  domainId: number;
+  stage: SRSStage;
+  status: 'mastered' | 'review' | 'unread';
+  intervalDays: number; // 0 | 1 | 3 | 7 | 14 | 30 | 60
+  repetitions: number;
+  easeFactor: number;
+  lastRating?: SRSRating;
+  nextReviewAt: string; // ISO date string
+  updatedAt: string; // ISO date string
+}
+

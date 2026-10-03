@@ -34,11 +34,17 @@ service cloud.firestore {
 
     function isValidFlashcardProgress(data) {
       return data.keys().hasAll(['uid', 'cardId', 'status']) &&
-             data.keys().hasOnly(['uid', 'cardId', 'domainId', 'status', 'updatedAt']) &&
+             data.keys().hasOnly(['uid', 'cardId', 'domainId', 'status', 'stage', 'intervalDays', 'repetitions', 'easeFactor', 'lastRating', 'nextReviewAt', 'updatedAt']) &&
              data.uid is string && data.uid == request.auth.uid && data.uid.size() <= 128 &&
              data.cardId is int && data.cardId >= 1 && data.cardId <= 10000 &&
              (!('domainId' in data) || (data.domainId is int && data.domainId >= 1 && data.domainId <= 5)) &&
              data.status is string && data.status in ['mastered', 'review', 'unread'] &&
+             (!('stage' in data) || (data.stage is string && data.stage in ['new', 'difficult', 'review', 'acquired', 'consolidated'])) &&
+             (!('intervalDays' in data) || (data.intervalDays is int && data.intervalDays >= 0 && data.intervalDays <= 365)) &&
+             (!('repetitions' in data) || (data.repetitions is int && data.repetitions >= 0 && data.repetitions <= 1000)) &&
+             (!('easeFactor' in data) || (data.easeFactor is number && data.easeFactor >= 1.0 && data.easeFactor <= 5.0)) &&
+             (!('lastRating' in data) || (data.lastRating is string && data.lastRating in ['again', 'hard', 'good', 'easy'])) &&
+             (!('nextReviewAt' in data) || (data.nextReviewAt is string && data.nextReviewAt.size() <= 64)) &&
              (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
     }
 

@@ -418,11 +418,79 @@ response = client.messages.create(
     rationale: 'Claude a été spécifiquement entraîné pour interpréter les balises XML comme des délimiteurs sémantiques prioritaires, évitant ainsi la confusion entre consignes système et contenu utilisateur.',
     sourceDoc: 'Anthropic Prompt Engineering Interactive Tutorial: XML Tags Structuring',
   },
+
+  // Question 37 (Featured in "Continue where you left off" — CCA-P200 Tool Use & MCP Question 37 / 50)
+  {
+    id: 37,
+    domainId: 3,
+    domainCode: 'Domaine 03 : Tool Use & Model Context Protocol (MCP)',
+    domainTitle: 'Tool Use & MCP — Gestion d’erreur & Résultats Parallèles',
+    category: 'Tool Use & MCP',
+    weight: 3.0,
+    scenario:
+      "Session CCA-P200 (Question 37 / 50) : Votre agent MCP interroge simultanément 3 outils (`get_customer_profile`, `fetch_ledger_balance`, `check_fraud_signals`). Le serveur MCP hébergeant `check_fraud_signals` renvoie une erreur d'indisponibilité temporaire (HTTP 503).",
+    question:
+      "Quelle structure de message devez-vous renvoyer à l'API Messages d'Anthropic au tour suivant pour permettre à l'agent de poursuivre son raisonnement sans provoquer d'erreur HTTP 400 ?",
+    codeFilename: 'mcp_parallel_tool_results.json',
+    codeLanguage: 'json',
+    codeSnippet: `{
+  "role": "user",
+  "content": [
+    {
+      "type": "tool_result",
+      "tool_use_id": "toolu_01Profile",
+      "content": "{\\"tier\\": \\"platinum\\", \\"kyc_verified\\": true}"
+    },
+    {
+      "type": "tool_result",
+      "tool_use_id": "toolu_02Balance",
+      "content": "{\\"available_eur\\": 14500.00}"
+    },
+    {
+      "type": "tool_result",
+      "tool_use_id": "toolu_03Fraud",
+      "is_error": true,
+      "content": "Service check_fraud_signals indisponible (HTTP 503). Basculez en mode dégradé lecture seule."
+    }
+  ]
+}`,
+    slaLatency: '< 1 800 ms',
+    tokensContext: '~8 400 tks',
+    cacheHitTarget: '≥ 90%',
+    diagramNote: 'Un seul message role="user" agrégeant tous les tool_result parallèles + is_error: true.',
+    options: [
+      {
+        id: 'A',
+        text: 'Envoyer trois messages successifs avec role="user", chacun contenant un seul bloc tool_result.',
+        subtext: 'Provoque une erreur 400 : le premier message user ne contient pas tous les tool_use_id attendus.',
+      },
+      {
+        id: 'B',
+        text: 'Regrouper les 3 blocs tool_result dans un UNIQUE message role="user" placé immédiatement après le tour assistant, en marquant le bloc en échec avec is_error: true.',
+        subtext: 'Respecte le contrat strict tool_use -> tool_result et informe proprement Claude de l’erreur partielle.',
+        isCorrect: true,
+      },
+      {
+        id: 'C',
+        text: 'Supprimer le bloc tool_use en échec de l’historique assistant et ne renvoyer que les 2 résultats valides.',
+        subtext: 'Corrompt l’intégrité de l’historique conversationnel et des signatures Extended Thinking.',
+      },
+      {
+        id: 'D',
+        text: 'Placer un bloc text explicatif avant les blocs tool_result dans le message user.',
+        subtext: 'Les blocs tool_result doivent impérativement précéder tout bloc text dans le tableau content.',
+      },
+    ],
+    correctOptionId: 'B',
+    rationale:
+      'Lorsque Claude émet plusieurs blocs tool_use dans un même tour, tous les blocs tool_result correspondants doivent être retournés dans un seul message user, en tête du tableau content, avec is_error: true pour tout outil ayant échoué.',
+    sourceDoc: 'Anthropic MCP & Tool Use Specification: Parallel Tool Calls & Error Handling',
+  },
 ];
 
 // Helper to fill 60 questions with realistic Anthropic exam questions
 for (let i = 1; i <= 60; i++) {
-  if (i === 24 || i === 42 || i === 18 || i === 27) continue;
+  if (i === 24 || i === 42 || i === 18 || i === 27 || i === 37) continue;
 
   const domainIdx = (i % 5) + 1;
   const domain = OFFICIAL_DOMAINS[domainIdx - 1];

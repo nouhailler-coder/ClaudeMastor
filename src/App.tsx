@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { TabType, TrickyQuestion } from './types';
+import { TabType, TrickyQuestion, TrainingDurationMode } from './types';
+import { ResumeCheckpoint } from './utils/resumeEngine';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './components/DashboardView';
+import { DailyChallengeView } from './components/DailyChallengeView';
+import { StudyPlanView } from './components/StudyPlanView';
+import { ArchitectureCasesView } from './components/ArchitectureCasesView';
+import { SkillsBadgesView } from './components/SkillsBadgesView';
 import { ExamSimulatorView } from './components/ExamSimulatorView';
 import { ScorecardView } from './components/ScorecardView';
 import { LabPracticeView } from './components/LabPracticeView';
+import { MyMistakesView } from './components/MyMistakesView';
 import { FlashcardsView } from './components/FlashcardsView';
 import { EncyclopediaView } from './components/EncyclopediaView';
 import { ConceptModal } from './components/ConceptModal';
@@ -19,7 +25,39 @@ export default function App() {
   const [activeFlashcardId, setActiveFlashcardId] = useState<number | null>(null);
   const [activeFlashcardDomainId, setActiveFlashcardDomainId] = useState<number | 'all'>('all');
   const [activeEncyclopediaArticleId, setActiveEncyclopediaArticleId] = useState<string | null>(null);
+  const [selectedTrainingMode, setSelectedTrainingMode] = useState<TrainingDurationMode>('today-5q');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleSelectTrainingMode = (mode: TrainingDurationMode) => {
+    setSelectedTrainingMode(mode);
+    setCurrentTab('daily-challenge');
+  };
+
+  const handleResumeCheckpoint = (cp: ResumeCheckpoint) => {
+    if (cp.certId) {
+      setActiveCertId(cp.certId);
+    }
+    if (cp.moduleType === 'drill' || cp.moduleType === 'exam') {
+      setActiveQuestionId(cp.payload.questionId || 37);
+      setCurrentTab('exam');
+      return;
+    }
+    if (cp.moduleType === 'flashcards') {
+      setActiveFlashcardId(cp.payload.flashcardId || null);
+      setActiveFlashcardDomainId(cp.payload.domainId || 3);
+      setCurrentTab('flashcards');
+      return;
+    }
+    if (cp.moduleType === 'architecture') {
+      setCurrentTab('architecture-cases');
+      return;
+    }
+    if (cp.moduleType === 'lab') {
+      setCurrentTab('lab');
+      return;
+    }
+    setCurrentTab(cp.targetTab);
+  };
 
   const handleStartExam = () => {
     setActiveQuestionId(24);
@@ -99,8 +137,42 @@ export default function App() {
                 onSelectCertification={(certId) => setActiveCertId(certId)}
                 onSelectDomainFlashcards={handleSelectDomainFlashcards}
                 onNavigateTab={(tab) => setCurrentTab(tab)}
+                onSelectTrainingMode={handleSelectTrainingMode}
+                onResumeCheckpoint={handleResumeCheckpoint}
                 onRetestConcept={handleRetestConcept}
                 onLaunchDrill={handleLaunchDrill}
+              />
+            )}
+
+            {currentTab === 'daily-challenge' && (
+              <DailyChallengeView
+                activeCertId={activeCertId}
+                initialTrainingMode={selectedTrainingMode}
+                onSelectCertification={(certId) => setActiveCertId(certId)}
+                onSelectDomainFlashcards={handleSelectDomainFlashcards}
+                onLaunchDomainDrill={handleLaunchDrill}
+                onNavigateTab={(tab) => setCurrentTab(tab)}
+              />
+            )}
+
+            {currentTab === 'study-plan' && (
+              <StudyPlanView
+                activeCertId={activeCertId}
+                onSelectCertification={(certId) => setActiveCertId(certId)}
+                onNavigateTab={(tab) => setCurrentTab(tab)}
+                onSelectDomainFlashcards={handleSelectDomainFlashcards}
+                onLaunchDomainDrill={handleLaunchDrill}
+                onOpenEncyclopedia={handleOpenEncyclopedia}
+              />
+            )}
+
+            {currentTab === 'architecture-cases' && <ArchitectureCasesView />}
+
+            {currentTab === 'skills-badges' && (
+              <SkillsBadgesView
+                onNavigateTab={(tab) => setCurrentTab(tab)}
+                onSelectDomainFlashcards={handleSelectDomainFlashcards}
+                onLaunchDomainDrill={handleLaunchDrill}
               />
             )}
 
@@ -119,6 +191,14 @@ export default function App() {
                   setCurrentTab('exam');
                 }}
                 onNavigateTab={(tab) => setCurrentTab(tab)}
+              />
+            )}
+
+            {currentTab === 'my-mistakes' && (
+              <MyMistakesView
+                onNavigateTab={(tab) => setCurrentTab(tab)}
+                onLaunchDrill={handleLaunchDrill}
+                onSelectDomainFlashcards={handleSelectDomainFlashcards}
               />
             )}
 

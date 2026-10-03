@@ -156,12 +156,20 @@ export async function signOutUser(): Promise<void> {
   }
 }
 
-// User flashcard mastery persistence
+// User flashcard mastery & SRS persistence
 export async function saveFlashcardStatus(
   userId: string,
   cardId: number,
   domainId: number,
-  status: 'mastered' | 'review' | 'unread'
+  status: 'mastered' | 'review' | 'unread',
+  srsExtras?: {
+    stage?: 'new' | 'difficult' | 'review' | 'acquired' | 'consolidated';
+    intervalDays?: number;
+    repetitions?: number;
+    easeFactor?: number;
+    lastRating?: 'again' | 'hard' | 'good' | 'easy';
+    nextReviewAt?: string;
+  }
 ): Promise<void> {
   const path = `users/${userId}/flashcardProgress/${cardId}`;
   try {
@@ -171,6 +179,12 @@ export async function saveFlashcardStatus(
       cardId,
       domainId,
       status,
+      ...(srsExtras?.stage ? { stage: srsExtras.stage } : {}),
+      ...(srsExtras?.intervalDays !== undefined ? { intervalDays: srsExtras.intervalDays } : {}),
+      ...(srsExtras?.repetitions !== undefined ? { repetitions: srsExtras.repetitions } : {}),
+      ...(srsExtras?.easeFactor !== undefined ? { easeFactor: srsExtras.easeFactor } : {}),
+      ...(srsExtras?.lastRating ? { lastRating: srsExtras.lastRating } : {}),
+      ...(srsExtras?.nextReviewAt ? { nextReviewAt: srsExtras.nextReviewAt } : {}),
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -193,6 +207,57 @@ export async function loadUserFlashcardProgress(
       }
     });
     return progress;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return {};
+  }
+}
+
+export async function loadUserSRSProgress(
+  userId: string
+): Promise<
+  Record<
+    number,
+    {
+      cardId: number;
+      domainId: number;
+      stage: 'new' | 'difficult' | 'review' | 'acquired' | 'consolidated';
+      status: 'mastered' | 'review' | 'unread';
+      intervalDays: number;
+      repetitions: number;
+      easeFactor: number;
+      lastRating?: 'again' | 'hard' | 'good' | 'easy';
+      nextReviewAt: string;
+      updatedAt: string;
+    }
+  >
+> {
+  const path = `users/${userId}/flashcardProgress`;
+  try {
+    const progressRef = collection(db, 'users', userId, 'flashcardProgress');
+    const snapshot = await getDocs(progressRef);
+    const srsMap: Record<number, any> = {};
+    snapshot.forEach((d) => {
+      const data = d.data();
+      if (data.cardId) {
+        const fallbackStage =
+          data.stage ||
+          (data.status === 'mastered' ? 'acquired' : data.status === 'review' ? 'review' : 'new');
+        srsMap[data.cardId] = {
+          cardId: data.cardId,
+          domainId: data.domainId || 1,
+          stage: fallbackStage,
+          status: data.status || 'unread',
+          intervalDays: typeof data.intervalDays === 'number' ? data.intervalDays : fallbackStage === 'acquired' ? 14 : 3,
+          repetitions: typeof data.repetitions === 'number' ? data.repetitions : 1,
+          easeFactor: typeof data.easeFactor === 'number' ? data.easeFactor : 2.5,
+          lastRating: data.lastRating,
+          nextReviewAt: data.nextReviewAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        };
+      }
+    });
+    return srsMap;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return {};

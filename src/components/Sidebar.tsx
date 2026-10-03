@@ -15,6 +15,9 @@ import {
   ChevronRight,
   Check,
   X,
+  Flame,
+  Network,
+  FileX2,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -51,6 +54,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: LayoutDashboard,
     },
     {
+      id: 'daily-challenge' as TabType,
+      label: 'Daily Challenge (15 min)',
+      icon: Flame,
+    },
+    {
+      id: 'study-plan' as TabType,
+      label: 'Plan de Révision (Coach)',
+      icon: Calendar,
+    },
+    {
+      id: 'architecture-cases' as TabType,
+      label: 'Architecture Cases (Design)',
+      icon: Network,
+    },
+    {
+      id: 'skills-badges' as TabType,
+      label: 'Niveaux & Badges (MCP)',
+      icon: Award,
+    },
+    {
       id: 'exam' as TabType,
       label: 'Examen Blanc',
       icon: FileQuestion,
@@ -59,6 +82,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'scorecard' as TabType,
       label: 'Scorecard & Diagnostic',
       icon: BarChart3,
+    },
+    {
+      id: 'my-mistakes' as TabType,
+      label: 'My Mistakes (127)',
+      icon: FileX2,
     },
     {
       id: 'lab' as TabType,

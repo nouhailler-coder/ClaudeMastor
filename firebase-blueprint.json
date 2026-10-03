@@ -37,7 +37,7 @@
     },
     "FlashcardProgress": {
       "title": "FlashcardProgress",
-      "description": "Tracking progress and mastery state for a specific flashcard.",
+      "description": "Tracking Spaced Repetition System (SRS) state, interval, and next review date for a specific flashcard.",
       "type": "object",
       "properties": {
         "uid": {
@@ -55,7 +55,34 @@
         "status": {
           "type": "string",
           "enum": ["mastered", "review", "unread"],
-          "description": "Learning status of this flashcard."
+          "description": "Legacy learning status of this flashcard."
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["new", "difficult", "review", "acquired", "consolidated"],
+          "description": "SRS mastery stage (Nouvelle, Difficile, À revoir, Acquise, Consolidée)."
+        },
+        "intervalDays": {
+          "type": "integer",
+          "description": "Scheduled review interval in days (1, 3, 7, 14, 30, 60)."
+        },
+        "repetitions": {
+          "type": "integer",
+          "description": "Consecutive successful repetitions count."
+        },
+        "easeFactor": {
+          "type": "number",
+          "description": "SRS ease multiplier (1.3 to 3.0)."
+        },
+        "lastRating": {
+          "type": "string",
+          "enum": ["again", "hard", "good", "easy"],
+          "description": "Last self-assessment rating given by the user."
+        },
+        "nextReviewAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when this card is next due for review."
         },
         "updatedAt": {
           "type": "string",

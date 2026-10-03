@@ -14,6 +14,7 @@ import {
   Check,
   X,
   Layers,
+  FileX2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { OFFICIAL_CERTIFICATIONS, OFFICIAL_DOMAINS } from '../data/mockData';
@@ -108,12 +109,23 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
             <button
-              onClick={onQuickDrill}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f0eded] text-[#1c1b1b] hover:bg-[#eae7e7] transition-colors font-mono text-[12px] font-medium border border-[#eae7e7]"
+              onClick={() => onNavigateTab('daily-challenge')}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fff8f5] text-[#99462a] hover:bg-[#ffdbd0]/60 transition-colors font-mono text-[12px] font-bold border border-[#f5dad0]"
               type="button"
+              title="Today's Challenge — 15 minutes · 5 questions"
             >
-              <Zap className="w-4 h-4 text-[#d97757]" />
-              <span>Test Rapide</span>
+              <Zap className="w-4 h-4 text-[#d97757] fill-[#d97757]" />
+              <span>Daily Challenge</span>
+            </button>
+
+            <button
+              onClick={() => onNavigateTab('my-mistakes')}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fff5f5] text-[#ba1a1a] hover:bg-[#ffebeb] transition-colors font-mono text-[12px] font-bold border border-[#ffdad6]"
+              type="button"
+              title="My Mistakes — 127 erreurs analysées"
+            >
+              <FileX2 className="w-4 h-4 text-[#ba1a1a]" />
+              <span>My Mistakes (127)</span>
             </button>
 
             <button
