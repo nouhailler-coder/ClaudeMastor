@@ -60,6 +60,23 @@ service cloud.firestore {
              (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
     }
 
+    function isValidUserNote(data) {
+      return data.keys().hasAll(['uid', 'targetType', 'targetId', 'content']) &&
+             data.keys().hasOnly(['uid', 'id', 'targetType', 'targetId', 'targetTitle', 'targetDomainId', 'targetDomainCode', 'certId', 'content', 'tags', 'createdAt', 'updatedAt']) &&
+             data.uid is string && data.uid == request.auth.uid && data.uid.size() <= 128 &&
+             data.targetType is string && data.targetType in ['flashcard', 'article'] &&
+             data.targetId is string && data.targetId.size() <= 128 &&
+             data.content is string && data.content.size() <= 20000 &&
+             (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
+             (!('targetTitle' in data) || (data.targetTitle is string && data.targetTitle.size() <= 256)) &&
+             (!('targetDomainId' in data) || (data.targetDomainId is int && data.targetDomainId >= 1 && data.targetDomainId <= 5)) &&
+             (!('targetDomainCode' in data) || (data.targetDomainCode is string && data.targetDomainCode.size() <= 64)) &&
+             (!('certId' in data) || (data.certId is string && data.certId.size() <= 64)) &&
+             (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
     // Health check test path
     match /test/connection {
       allow get: if true;
@@ -83,6 +100,13 @@ service cloud.firestore {
         allow list: if isOwner(userId);
         allow create, update: if isOwner(userId) && isValidId(userId) && isValidId(attemptId) && isValidExamAttempt(incoming());
         allow delete: if false;
+      }
+
+      match /notes/{noteId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(noteId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(userId) && isValidId(noteId) && isValidUserNote(incoming());
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(noteId);
       }
     }
   }

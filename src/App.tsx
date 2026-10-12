@@ -10,8 +10,10 @@ import { ArchitectureCasesView } from './components/ArchitectureCasesView';
 import { SkillsBadgesView } from './components/SkillsBadgesView';
 import { ExamSimulatorView } from './components/ExamSimulatorView';
 import { ScorecardView } from './components/ScorecardView';
+import { ExamReadinessView } from './components/ExamReadinessView';
 import { LabPracticeView } from './components/LabPracticeView';
 import { MyMistakesView } from './components/MyMistakesView';
+import { MyNotesView } from './components/MyNotesView';
 import { FlashcardsView } from './components/FlashcardsView';
 import { EncyclopediaView } from './components/EncyclopediaView';
 import { ConceptModal } from './components/ConceptModal';
@@ -194,11 +196,28 @@ export default function App() {
               />
             )}
 
+            {currentTab === 'exam-readiness' && (
+              <ExamReadinessView
+                activeCertId={activeCertId}
+                onSelectCertification={(certId) => setActiveCertId(certId)}
+                onNavigateTab={(tab) => setCurrentTab(tab)}
+                onLaunchDrill={handleLaunchDrill}
+                onSelectDomainFlashcards={handleSelectDomainFlashcards}
+              />
+            )}
+
             {currentTab === 'my-mistakes' && (
               <MyMistakesView
                 onNavigateTab={(tab) => setCurrentTab(tab)}
                 onLaunchDrill={handleLaunchDrill}
                 onSelectDomainFlashcards={handleSelectDomainFlashcards}
+              />
+            )}
+
+            {currentTab === 'my-notes' && (
+              <MyNotesView
+                onOpenFlashcard={handleOpenFlashcard}
+                onOpenEncyclopedia={handleOpenEncyclopedia}
               />
             )}
 
@@ -211,6 +230,7 @@ export default function App() {
                 initialCardId={activeFlashcardId}
                 initialDomainId={activeFlashcardDomainId}
                 onOpenEncyclopedia={handleOpenEncyclopedia}
+                onNavigateToNotes={() => setCurrentTab('my-notes')}
               />
             )}
 
@@ -218,6 +238,7 @@ export default function App() {
               <EncyclopediaView
                 initialArticleId={activeEncyclopediaArticleId}
                 onOpenFlashcard={handleOpenFlashcard}
+                onNavigateToNotes={() => setCurrentTab('my-notes')}
               />
             )}
           </div>

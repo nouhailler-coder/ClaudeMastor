@@ -46,7 +46,9 @@ import {
   Calendar,
   Zap,
   CornerDownLeft,
+  StickyNote,
 } from 'lucide-react';
+import { NotesSection } from './NotesSection';
 
 interface FlashcardsViewProps {
   activeCertId?: string;
@@ -54,6 +56,7 @@ interface FlashcardsViewProps {
   initialCardId?: number | null;
   initialDomainId?: number | 'all';
   onOpenEncyclopedia: (articleId: string) => void;
+  onNavigateToNotes?: () => void;
 }
 
 type StageFilterType = 'all' | 'due' | SRSStage;
@@ -64,6 +67,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   initialCardId,
   initialDomainId,
   onOpenEncyclopedia,
+  onNavigateToNotes,
 }) => {
   const { currentUser } = useAuth();
   const [selectedCertId, setSelectedCertId] = useState<string>(
@@ -1208,6 +1212,17 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
+
+          {/* 📝 My Notes Section on this Flashcard */}
+          <NotesSection
+            targetType="flashcard"
+            targetId={currentCard.id}
+            targetTitle={`Flashcard #${currentCard.id} : ${currentCard.topic}`}
+            targetDomainId={currentCard.domainId}
+            targetDomainCode={currentCard.domainCode}
+            certId={selectedCertId}
+            onOpenAllNotes={onNavigateToNotes}
+          />
 
           {/* Quick Jump Palette Matrix with 5-stage SRS colors & intervals */}
           <div className="bg-[#f6f3f2] p-4 rounded-2xl border border-[#eae7e7] mt-4 flex flex-col gap-3">

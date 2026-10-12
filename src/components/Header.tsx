@@ -15,9 +15,12 @@ import {
   X,
   Layers,
   FileX2,
+  StickyNote,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { OFFICIAL_CERTIFICATIONS, OFFICIAL_DOMAINS } from '../data/mockData';
+import { loadStoredReadiness } from '../utils/readinessEngine';
+import { loadStoredNotes, NOTES_UPDATED_EVENT } from '../utils/notesEngine';
 import { TabType } from '../types';
 
 interface HeaderProps {
@@ -45,6 +48,15 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { currentUser, signIn, signOut, loading } = useAuth();
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
+  const [notesCount, setNotesCount] = useState(() => loadStoredNotes().length);
+
+  React.useEffect(() => {
+    const handleUpdate = () => {
+      setNotesCount(loadStoredNotes().length);
+    };
+    window.addEventListener(NOTES_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(NOTES_UPDATED_EVENT, handleUpdate);
+  }, []);
 
   const activeCert =
     OFFICIAL_CERTIFICATIONS.find((c) => c.id === activeCertId) || OFFICIAL_CERTIFICATIONS[0];
@@ -126,6 +138,16 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <FileX2 className="w-4 h-4 text-[#ba1a1a]" />
               <span>My Mistakes (127)</span>
+            </button>
+
+            <button
+              onClick={() => onNavigateTab('my-notes')}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#fffbf0] text-[#8a5b00] hover:bg-[#fff5d6] transition-colors font-mono text-[12px] font-bold border border-[#fae8b4]"
+              type="button"
+              title="Mes annotations — Carnet de notes personnel"
+            >
+              <StickyNote className="w-4 h-4 text-[#8a5b00]" />
+              <span>Mes annotations ({notesCount})</span>
             </button>
 
             <button
@@ -270,9 +292,14 @@ export const Header: React.FC<HeaderProps> = ({
                           <span className="text-[#55433d]">{cert.level}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[11px] font-bold text-[#1c1b1b]">
-                            {cert.readinessPercentage}% prêt
-                          </span>
+                          {(() => {
+                            const cReadiness = loadStoredReadiness(cert.id);
+                            return (
+                              <span className="font-mono text-[11px] font-bold text-[#1c1b1b]">
+                                {cReadiness.globalScore}/100 · {cReadiness.confidence}
+                              </span>
+                            );
+                          })()}
                           {isSelected && <Check className="w-4 h-4 text-[#99462a]" />}
                         </div>
                       </div>

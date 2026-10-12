@@ -29,6 +29,8 @@ import {
   Play,
   RotateCcw,
 } from 'lucide-react';
+import { ReadinessScoreWidget } from './ReadinessScoreWidget';
+import { loadStoredReadiness } from '../utils/readinessEngine';
 
 interface ScorecardViewProps {
   onStartRetest: () => void;
@@ -418,6 +420,14 @@ export const ScorecardView: React.FC<ScorecardViewProps> = ({
             </div>
           </div>
         </div>
+      </section>
+
+      {/* SECTION READINESS MULTIDIMENSIONNEL (78 / 100 · Confiance : moyenne) */}
+      <section className="mb-10">
+        <ReadinessScoreWidget
+          initialReadiness={loadStoredReadiness('cca-p200')}
+          onNavigateTab={onNavigateTab}
+        />
       </section>
 
       {/* NEW SECTION: ÉVOLUTION DANS LE TEMPS (J1 -> J7 -> J14 -> J21 -> J28) & "EST-CE QUE JE PROGRESSE ?" */}

@@ -30,8 +30,12 @@ import {
   Compass,
   FileX2,
   AlertTriangle,
+  StickyNote,
 } from 'lucide-react';
 import { MISTAKES_DOMAIN_COUNTS } from '../data/myMistakesData';
+import { ReadinessScoreWidget } from './ReadinessScoreWidget';
+import { loadStoredReadiness, computeIntelligentReadiness } from '../utils/readinessEngine';
+import { loadStoredNotes, NOTES_UPDATED_EVENT } from '../utils/notesEngine';
 
 interface DashboardViewProps {
   activeCertId: string;
@@ -91,6 +95,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     onRetestConcept(q);
   };
 
+  const activeReadiness = loadStoredReadiness(activeCertId);
+
+  const [dashboardNotes, setDashboardNotes] = useState(() => loadStoredNotes());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setDashboardNotes(loadStoredNotes());
+    };
+    window.addEventListener(NOTES_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(NOTES_UPDATED_EVENT, handleUpdate);
+  }, []);
+
   return (
     <div className="flex flex-col w-full pb-16">
       {/* Top Greeting & Target Canvas */}
@@ -108,13 +124,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </h1>
           <p className="text-[17px] text-[#55433d] mt-2 leading-relaxed">
             Vous êtes à{' '}
-            <span className="text-[#99462a] font-semibold">
-              {activeCert.readinessPercentage}%
+            <span className="text-[#99462a] font-bold">
+              {activeReadiness.globalScore} / 100
             </span>{' '}
-            de préparation pour la certification{' '}
+            de Readiness global (
+            <span className="font-mono text-[13px] font-bold text-[#b25e00]">
+              Confiance : {activeReadiness.confidence}
+            </span>
+            ) pour la certification{' '}
             <strong className="text-[#1c1b1b]">{activeCert.shortTitle}</strong> (seuil officiel :{' '}
             {activeCert.passingScore}/1000).
           </p>
+
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => onNavigateTab('exam-readiness')}
+              className="px-4 py-2 rounded-xl bg-[#99462a] hover:bg-[#7a2f15] text-white font-mono text-[12px] font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
+            >
+              <span>Ouvrir la page « Exam Readiness »</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+            <span className="font-mono text-[11px] text-[#88726c]">
+              {activeCert.code} · Prêt pour l'examen : probablement (78%) · Programme 4 jours
+            </span>
+          </div>
         </div>
 
         {/* Exam Countdown Module */}
@@ -326,6 +360,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </section>
 
+      {/* SECTION 0.7: Readiness Score Intelligent (READINESS 78 / 100 · Connaissances 84, Rétention 76, Vitesse 71, Cas pratiques 73, Examens blancs 81 · Confiance : moyenne) */}
+      <section className="mb-10">
+        <ReadinessScoreWidget
+          initialReadiness={activeReadiness}
+          onNavigateTab={onNavigateTab}
+          onLaunchDrill={onLaunchDrill}
+        />
+      </section>
+
       {/* Section 1: Les Différentes Certifications Officielles Anthropic */}
       <section className="mb-10 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
@@ -386,20 +429,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span>Seuil {cert.passingScore}</span>
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between font-mono text-[10px]">
-                      <span className="text-[#88726c]">Préparation</span>
-                      <span className="font-bold text-[#99462a]">
-                        {cert.readinessPercentage}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-[#e5e2e1] h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className="bg-[#99462a] h-full rounded-full transition-all duration-500"
-                        style={{ width: `${cert.readinessPercentage}%` }}
-                      />
-                    </div>
-                  </div>
+                  {(() => {
+                    const cReadiness = loadStoredReadiness(cert.id);
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between font-mono text-[10px]">
+                          <span className="text-[#88726c]">Readiness multidimensionnel</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-[#99462a]">
+                              {cReadiness.globalScore} / 100
+                            </span>
+                            <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-semibold ${
+                              cReadiness.confidence === 'élevée' || cReadiness.confidence === 'très élevée'
+                                ? 'bg-[#e8f5e9] text-[#1b5e20]'
+                                : cReadiness.confidence === 'moyenne'
+                                ? 'bg-[#fff4e5] text-[#b25e00]'
+                                : 'bg-[#ffdad6] text-[#ba1a1a]'
+                            }`}>
+                              {cReadiness.confidence}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-[#e5e2e1] h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-[#99462a] h-full rounded-full transition-all duration-500"
+                            style={{ width: `${cReadiness.globalScore}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex items-center gap-2 pt-1">
                     <button
@@ -756,6 +815,84 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>Consulter le carnet</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
+        </div>
+      </section>
+
+      {/* Section 1.28: Carnet de notes personnel & Synchronisation Firestore — « Mes annotations » */}
+      <section className="mb-8 rounded-3xl bg-white border border-[#e8dcd5] p-6 sm:p-7 shadow-xs flex flex-col gap-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#f0eded]">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[#99462a] uppercase tracking-wider font-bold">
+              <StickyNote className="w-4 h-4 text-[#99462a]" />
+              <span>Système de notes personnelles · Synchronisation Firestore</span>
+            </div>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <h2 className="font-headline text-[26px] sm:text-[30px] text-[#1c1b1b] font-bold tracking-tight">
+                Mes annotations
+              </h2>
+              <span className="px-3 py-0.5 rounded-full bg-[#fffbf0] text-[#8a5b00] border border-[#fae8b4] font-mono text-[12px] font-bold">
+                {dashboardNotes.length} notes rédigées
+              </span>
+            </div>
+            <p className="text-[14px] text-[#55433d] max-w-2xl leading-relaxed">
+              Consignez vos mémos clés (« À retenir : MCP Resources ≠ Tools », pièges d'examen, points de rupture de cache) directement sur les cartes et traités.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onNavigateTab('my-notes')}
+            className="px-5 py-2.5 rounded-xl bg-[#99462a] hover:bg-[#7a2f15] text-white font-mono text-[12px] font-bold shadow-xs transition-colors flex items-center justify-center gap-2 self-start lg:self-auto cursor-pointer"
+          >
+            <span>Ouvrir Mes annotations ({dashboardNotes.length})</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* 3 Featured Notes Preview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          {dashboardNotes.slice(0, 3).map((note) => {
+            const isFlashcard = note.targetType === 'flashcard';
+            return (
+              <div
+                key={note.id}
+                onClick={() => onNavigateTab('my-notes')}
+                className="p-4 rounded-2xl bg-[#fcf9f8] hover:bg-[#fff9f6] border border-[#eae7e7] hover:border-[#99462a]/50 transition-all flex flex-col justify-between gap-3 cursor-pointer group shadow-2xs"
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`font-mono text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                        isFlashcard
+                          ? 'bg-[#ffdbd0] text-[#7a2f15]'
+                          : 'bg-[#e0e9f8] text-[#1e40af]'
+                      }`}
+                    >
+                      {isFlashcard ? `Flashcard #${note.targetId}` : 'Traité'}
+                    </span>
+                    <span className="font-mono text-[10px] text-[#88726c]">
+                      {note.targetDomainCode}
+                    </span>
+                  </div>
+
+                  <h4 className="font-headline text-[14px] font-bold text-[#1c1b1b] group-hover:text-[#99462a] transition-colors line-clamp-1">
+                    {note.targetTitle}
+                  </h4>
+
+                  <p className="text-[12px] text-[#55433d] line-clamp-3 leading-relaxed font-sans bg-white p-2.5 rounded-xl border border-[#f0eded]">
+                    {note.content}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-[#f0eded] font-mono text-[10px] text-[#88726c]">
+                  <span>{note.tags?.[0] || '#À-retenir'}</span>
+                  <span className="text-[#99462a] font-bold flex items-center gap-0.5">
+                    Voir la note <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 

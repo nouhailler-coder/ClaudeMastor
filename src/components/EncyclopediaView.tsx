@@ -14,17 +14,21 @@ import {
   BookMarked,
   Sparkles,
   Filter,
-  Check
+  Check,
+  StickyNote,
 } from 'lucide-react';
+import { NotesSection } from './NotesSection';
 
 interface EncyclopediaViewProps {
   initialArticleId?: string | null;
   onOpenFlashcard: (cardId: number) => void;
+  onNavigateToNotes?: () => void;
 }
 
 export const EncyclopediaView: React.FC<EncyclopediaViewProps> = ({
   initialArticleId,
   onOpenFlashcard,
+  onNavigateToNotes,
 }) => {
   const [selectedArticleId, setSelectedArticleId] = useState<string>(
     initialArticleId || ENCYCLOPEDIA_ARTICLES[0].id
@@ -340,6 +344,16 @@ export const EncyclopediaView: React.FC<EncyclopediaViewProps> = ({
                 </ul>
               </div>
             </div>
+
+            {/* 📝 My Notes Section on this Article */}
+            <NotesSection
+              targetType="article"
+              targetId={currentArticle.id}
+              targetTitle={currentArticle.term}
+              targetDomainId={currentArticle.domainId}
+              targetDomainCode={currentArticle.domainCode}
+              onOpenAllNotes={onNavigateToNotes}
+            />
 
             {/* Linked Flashcards Section */}
             <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#eae7e7] flex flex-col gap-3">

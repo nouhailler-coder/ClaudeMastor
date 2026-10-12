@@ -128,6 +128,68 @@
         }
       },
       "required": ["uid", "score", "totalQuestions", "percentage", "passed"]
+    },
+    "UserNote": {
+      "title": "UserNote",
+      "description": "User personal study notes, key takeaways, and annotations on flashcards and architecture articles.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Authentication User ID."
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique note identifier."
+        },
+        "targetType": {
+          "type": "string",
+          "enum": ["flashcard", "article"],
+          "description": "Content type being annotated."
+        },
+        "targetId": {
+          "type": "string",
+          "description": "ID of target flashcard or article."
+        },
+        "targetTitle": {
+          "type": "string",
+          "description": "Title or topic of the annotated content."
+        },
+        "targetDomainId": {
+          "type": "integer",
+          "description": "Domain ID (1 to 5)."
+        },
+        "targetDomainCode": {
+          "type": "string",
+          "description": "Domain code string."
+        },
+        "certId": {
+          "type": "string",
+          "description": "Certification track identifier."
+        },
+        "content": {
+          "type": "string",
+          "description": "User note text or markdown content."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tags or keywords for quick filtering."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp."
+        }
+      },
+      "required": ["uid", "targetType", "targetId", "content"]
     }
   },
   "firestore": {
@@ -142,6 +204,10 @@
     "/users/{userId}/examAttempts/{attemptId}": {
       "schema": "ExamAttempt",
       "description": "Stores mock exam scorecards and history for an individual user."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "UserNote",
+      "description": "Stores personal study notes and annotations for an individual user."
     }
   }
 }

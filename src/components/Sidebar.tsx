@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { TabType } from '../types';
 import { OFFICIAL_CERTIFICATIONS, OFFICIAL_DOMAINS } from '../data/mockData';
+import { loadStoredReadiness } from '../utils/readinessEngine';
+import { loadStoredNotes, NOTES_UPDATED_EVENT } from '../utils/notesEngine';
 import {
   LayoutDashboard,
   FileQuestion,
@@ -18,6 +20,8 @@ import {
   Flame,
   Network,
   FileX2,
+  Target,
+  StickyNote,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -43,6 +47,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [certsExpanded, setCertsExpanded] = useState(true);
   const [domainsExpanded, setDomainsExpanded] = useState(true);
+  const [notesCount, setNotesCount] = useState(() => loadStoredNotes().length);
+
+  React.useEffect(() => {
+    const handleUpdate = () => {
+      setNotesCount(loadStoredNotes().length);
+    };
+    window.addEventListener(NOTES_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(NOTES_UPDATED_EVENT, handleUpdate);
+  }, []);
 
   const activeCert =
     OFFICIAL_CERTIFICATIONS.find((c) => c.id === activeCertId) || OFFICIAL_CERTIFICATIONS[0];
@@ -84,9 +97,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: BarChart3,
     },
     {
+      id: 'exam-readiness' as TabType,
+      label: 'Exam Readiness (78%)',
+      icon: Target,
+    },
+    {
       id: 'my-mistakes' as TabType,
       label: 'My Mistakes (127)',
       icon: FileX2,
+    },
+    {
+      id: 'my-notes' as TabType,
+      label: `Mes annotations (${notesCount})`,
+      icon: StickyNote,
     },
     {
       id: 'lab' as TabType,
@@ -161,29 +184,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Preparation Status Bar for Active Certification */}
-          <div className="bg-[#f0eded] p-3 rounded-xl flex flex-col gap-1.5 border border-[#eae7e7]">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] text-[#55433d] uppercase tracking-wider truncate">
-                {activeCert.shortTitle}
-              </span>
-              <span className="font-mono text-[11px] text-[#99462a] font-bold shrink-0">
-                {activeCert.readinessPercentage}% Prêt
-              </span>
-            </div>
-            <div className="w-full bg-[#eae7e7] h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-[#99462a] h-full rounded-full transition-all duration-500"
-                style={{ width: `${activeCert.readinessPercentage}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between font-mono text-[10px] text-[#88726c] pt-0.5">
-              <span>{activeCert.questionsCount} questions</span>
-              <span>·</span>
-              <span>{activeCert.durationMinutes} min</span>
-              <span>·</span>
-              <span>Seuil {activeCert.passingScore}</span>
-            </div>
-          </div>
+          {(() => {
+            const certReadiness = loadStoredReadiness(activeCert.id);
+            return (
+              <div className="bg-[#f0eded] p-3 rounded-xl flex flex-col gap-1.5 border border-[#eae7e7]">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] text-[#55433d] uppercase tracking-wider truncate">
+                    {activeCert.shortTitle}
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="font-mono text-[11px] text-[#99462a] font-bold">
+                      {certReadiness.globalScore} / 100
+                    </span>
+                    <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-bold ${
+                      certReadiness.confidence === 'élevée' || certReadiness.confidence === 'très élevée'
+                        ? 'bg-[#e8f5e9] text-[#1b5e20]'
+                        : certReadiness.confidence === 'moyenne'
+                        ? 'bg-[#fff4e5] text-[#b25e00]'
+                        : 'bg-[#ffdad6] text-[#ba1a1a]'
+                    }`}>
+                      {certReadiness.confidence}
+                    </span>
+                  </div>
+                </div>
+                <div className="w-full bg-[#eae7e7] h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-[#99462a] h-full rounded-full transition-all duration-500"
+                    style={{ width: `${certReadiness.globalScore}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between font-mono text-[10px] text-[#88726c] pt-0.5">
+                  <span>{activeCert.questionsCount} questions</span>
+                  <span>·</span>
+                  <span>{activeCert.durationMinutes} min</span>
+                  <span>·</span>
+                  <span>Seuil {activeCert.passingScore}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Main Navigation */}
           <nav className="flex flex-col gap-0.5">
@@ -264,9 +303,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           </span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <span className="font-mono text-[10px] font-semibold text-[#55433d]">
-                            {cert.readinessPercentage}%
-                          </span>
+                          {(() => {
+                            const cReadiness = loadStoredReadiness(cert.id);
+                            return (
+                              <span className="font-mono text-[10px] font-semibold text-[#55433d]">
+                                {cReadiness.globalScore}/100
+                              </span>
+                            );
+                          })()}
                           {isSelected && <Check className="w-3 h-3 text-[#99462a]" />}
                         </div>
                       </div>

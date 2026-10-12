@@ -11,9 +11,11 @@ import {
   collection,
   getDocs,
   updateDoc,
+  deleteDoc,
   Timestamp,
   Firestore,
 } from 'firebase/firestore';
+import { UserNote } from './types';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Silence noisy internal WebChannel retry warnings in restricted proxy/iframe networks
@@ -286,5 +288,80 @@ export async function saveExamAttempt(
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+// User notes persistence & synchronization
+export async function saveUserNoteToFirestore(
+  userId: string,
+  note: UserNote
+): Promise<void> {
+  const noteId = note.id;
+  const path = `users/${userId}/notes/${noteId}`;
+  try {
+    const noteRef = doc(db, 'users', userId, 'notes', noteId);
+    await setDoc(noteRef, {
+      uid: userId,
+      id: note.id,
+      targetType: note.targetType,
+      targetId: String(note.targetId),
+      targetTitle: (note.targetTitle || '').slice(0, 256),
+      targetDomainId: note.targetDomainId || 1,
+      targetDomainCode: (note.targetDomainCode || '').slice(0, 64),
+      certId: (note.certId || 'cca-f100').slice(0, 64),
+      content: note.content.slice(0, 20000),
+      tags: (note.tags || []).slice(0, 20),
+      createdAt: note.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function loadUserNotesFromFirestore(
+  userId: string
+): Promise<UserNote[]> {
+  const path = `users/${userId}/notes`;
+  try {
+    const notesRef = collection(db, 'users', userId, 'notes');
+    const snapshot = await getDocs(notesRef);
+    const notes: UserNote[] = [];
+    snapshot.forEach((d) => {
+      const data = d.data();
+      if (data.id && data.content) {
+        notes.push({
+          id: data.id,
+          uid: data.uid || userId,
+          targetType: data.targetType || 'flashcard',
+          targetId: String(data.targetId),
+          targetTitle: data.targetTitle || '',
+          targetDomainId: data.targetDomainId || 1,
+          targetDomainCode: data.targetDomainCode || '01. Architecture',
+          certId: data.certId || 'cca-f100',
+          content: data.content,
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        });
+      }
+    });
+    return notes;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+export async function deleteUserNoteFromFirestore(
+  userId: string,
+  noteId: string
+): Promise<void> {
+  const path = `users/${userId}/notes/${noteId}`;
+  try {
+    const noteRef = doc(db, 'users', userId, 'notes', noteId);
+    await deleteDoc(noteRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }

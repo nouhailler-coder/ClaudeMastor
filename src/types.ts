@@ -5,6 +5,8 @@ export type TabType =
   | 'architecture-cases'
   | 'skills-badges'
   | 'my-mistakes'
+  | 'my-notes'
+  | 'exam-readiness'
   | 'exam'
   | 'scorecard'
   | 'lab'
@@ -158,6 +160,58 @@ export interface SRSCardRecord {
   easeFactor: number;
   lastRating?: SRSRating;
   nextReviewAt: string; // ISO date string
+  updatedAt: string; // ISO date string
+}
+
+export type ConfidenceLevel = 'faible' | 'moyenne' | 'élevée' | 'très élevée';
+
+export interface ReadinessDimension {
+  id: 'knowledge' | 'retention' | 'speed' | 'practice' | 'mockExams';
+  label: string; // 'Connaissances', 'Rétention', 'Vitesse', 'Cas pratiques', 'Examens blancs'
+  score: number; // 0-100 (ex: 84, 76, 71, 73, 81)
+  targetScore: number;
+  weight: number;
+  description: string;
+  detail: string;
+  status: 'optimal' | 'vigilance' | 'alerte';
+}
+
+export interface IntelligentReadiness {
+  certId: string;
+  certCode: string;
+  globalScore: number; // e.g. 78
+  maxScore: number; // 100
+  confidence: ConfidenceLevel; // 'moyenne'
+  confidenceReason: string;
+  confidenceDetail: string;
+  dimensions: {
+    knowledge: ReadinessDimension;
+    retention: ReadinessDimension;
+    speed: ReadinessDimension;
+    practice: ReadinessDimension;
+    mockExams: ReadinessDimension;
+  };
+  asymmetryAlert?: {
+    highest: string;
+    lowest: string;
+    gap: number;
+    warning: string;
+    remedyRecommendation: string;
+  };
+}
+
+export interface UserNote {
+  id: string; // unique note id, e.g. "note_fc_12" or "note_art_mcp-protocol"
+  uid?: string;
+  targetType: 'flashcard' | 'article';
+  targetId: string; // e.g. "12" or "mcp-protocol"
+  targetTitle: string; // e.g. "Différence MCP Resources vs Tools"
+  targetDomainId: number; // 1 to 5
+  targetDomainCode: string; // e.g. "03. Tool Use & MCP"
+  certId?: string; // "cca-f100", "cca-p200", etc.
+  content: string; // user's note text (e.g. "À retenir : MCP Resources ≠ Tools")
+  tags: string[]; // e.g. ["#À-retenir", "#MCP", "#Piège-examen"]
+  createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
 
